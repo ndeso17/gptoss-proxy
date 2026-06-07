@@ -10,9 +10,18 @@ A tiny Cloudflare Worker that exposes a **single OpenAI-compatible endpoint**:
 
 ## 🚀 One-click deploy
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/junioralive/gptoss-proxy)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/ndeso17/gptoss-proxy)
 
 NOTE: You can [Join our Discord](https://discord.gg/cwDTVKyKJz) server if you face issues deploying.
+
+## 🔐 Auth patch
+
+Repo fork ini sudah diupdate untuk auth GPT-OSS terbaru. Lihat juga:
+
+- [`AUTH_ANALYSIS&PATCH.md`](./AUTH_ANALYSIS&PATCH.md)
+- [`AUTH_ANALYSIS.md`](./AUTH_ANALYSIS.md)
+
+Catatan: repo original bisa gagal request karena flow auth Hugging Face terbaru. Pakai fork `ndeso17` + patch auth ini untuk deploy.
 
 ## ✨ Features
 
