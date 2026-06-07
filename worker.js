@@ -12,7 +12,10 @@ export default {
           website: "https://ish.junioralive.in",
           repo: "https://github.com/junioralive/gptoss-proxy",
         }),
-        { status: 200, headers: corsHeaders({ "content-type": "application/json" }) }
+        {
+          status: 200,
+          headers: corsHeaders({ "content-type": "application/json" }),
+        },
       );
     }
 
@@ -88,10 +91,17 @@ function getReasoningLevel(bodyMeta, headers) {
 
 // NEW: show reasoning (default = true). Clients can override via header or metadata.
 function getShowReasoning(bodyMeta, headers) {
-  const hdr = (headers.get("X-Show-Reasoning") || headers.get("x-show-reasoning") || "").toLowerCase();
+  const hdr = (
+    headers.get("X-Show-Reasoning") ||
+    headers.get("x-show-reasoning") ||
+    ""
+  ).toLowerCase();
   if (hdr === "true" || hdr === "1" || hdr === "yes") return true;
   if (hdr === "false" || hdr === "0" || hdr === "no") return false;
-  const meta = bodyMeta && typeof bodyMeta === "object" ? bodyMeta.show_reasoning : undefined;
+  const meta =
+    bodyMeta && typeof bodyMeta === "object"
+      ? bodyMeta.show_reasoning
+      : undefined;
   if (typeof meta === "boolean") return meta;
   return true; // default: ON
 }
@@ -106,10 +116,10 @@ function lastUserText(messages) {
         return c
           .map((p) =>
             typeof p === "object" && (p.type === undefined || p.type === "text")
-              ? p.text ?? ""
+              ? (p.text ?? "")
               : typeof p === "string"
-              ? p
-              : ""
+                ? p
+                : "",
           )
           .join("");
       }
@@ -130,7 +140,8 @@ function sseResponseHeaders() {
 }
 
 function cryptoRandomId(n) {
-  const alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  const alphabet =
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   let out = "";
   const bytes = crypto.getRandomValues(new Uint8Array(n));
   for (const b of bytes) out += alphabet[b % alphabet.length];
@@ -157,10 +168,10 @@ function listModels() {
     root: id,
     parent: null,
   }));
-  return new Response(
-    JSON.stringify({ object: "list", data: models }),
-    { status: 200, headers: corsHeaders({ "content-type": "application/json" }) }
-  );
+  return new Response(JSON.stringify({ object: "list", data: models }), {
+    status: 200,
+    headers: corsHeaders({ "content-type": "application/json" }),
+  });
 }
 
 /* --------------- /v1/chat/completions (OpenAI) --------------- */
@@ -169,23 +180,33 @@ async function openAICompatible(req) {
   const body = await req.json().catch(() => ({}));
   const model = (body && body.model) || "gpt-oss-120b";
   const stream = Boolean(body && body.stream);
-  const messages = (body && Array.isArray(body.messages) && body.messages) || [];
-  const metadata = (body && typeof body.metadata === "object" && body.metadata) || {};
+  const messages =
+    (body && Array.isArray(body.messages) && body.messages) || [];
+  const metadata =
+    (body && typeof body.metadata === "object" && body.metadata) || {};
 
   if (!SUPPORTED_MODELS.has(model)) {
     return new Response(
       JSON.stringify({
-        error: { message: `Unsupported model: ${model}`, supported: [...SUPPORTED_MODELS] },
+        error: {
+          message: `Unsupported model: ${model}`,
+          supported: [...SUPPORTED_MODELS],
+        },
       }),
-      { status: 400, headers: corsHeaders({ "content-type": "application/json" }) }
+      {
+        status: 400,
+        headers: corsHeaders({ "content-type": "application/json" }),
+      },
     );
   }
 
   // options
   const reasoning = getReasoningLevel(metadata, req.headers);
   const showReasoning = getShowReasoning(metadata, req.headers); // DEFAULT TRUE
-  const threadId = req.headers.get("x-gptoss-thread-id") || metadata.gptoss_thread_id || null;
-  const userId = req.headers.get("x-gptoss-user-id") || metadata.gptoss_user_id || null;
+  const threadId =
+    req.headers.get("x-gptoss-thread-id") || metadata.gptoss_thread_id || null;
+  const userId =
+    req.headers.get("x-gptoss-user-id") || metadata.gptoss_user_id || null;
 
   const text = lastUserText(messages);
 
@@ -215,11 +236,16 @@ async function openAICompatible(req) {
     headers,
     body: upstreamBody,
   });
+  console.log("UPSTREAM STATUS:", upstream.status);
+  console.log("UPSTREAM CONTENT TYPE:", upstream.headers.get("content-type"));
 
   if (!upstream.ok || !upstream.body) {
     return new Response(
       JSON.stringify({ error: `Upstream ${upstream.status}` }),
-      { status: 502, headers: corsHeaders({ "content-type": "application/json" }) }
+      {
+        status: 502,
+        headers: corsHeaders({ "content-type": "application/json" }),
+      },
     );
   }
 
@@ -240,7 +266,11 @@ async function openAICompatible(req) {
           finish_reason: "stop",
         },
       ],
-      usage: { prompt_tokens: null, completion_tokens: null, total_tokens: null },
+      usage: {
+        prompt_tokens: null,
+        completion_tokens: null,
+        total_tokens: null,
+      },
       system_fingerprint: JSON.stringify({
         gptoss_thread_id: aggregated.threadOut,
         reasoning_joined: aggregated.reasoningOut.join("\n"),
@@ -267,8 +297,8 @@ async function openAICompatible(req) {
             created,
             model,
             choices: [{ index: 0, delta: {}, finish_reason: null }],
-          })}\n\n`
-        )
+          })}\n\n`,
+        ),
       );
 
       let buffer = "";
@@ -288,6 +318,7 @@ async function openAICompatible(req) {
 
             if (!line.startsWith("data: ")) continue;
             const payload = line.slice(6).trim();
+            console.log("RAW PAYLOAD:", payload);
             if (!payload || payload === "[DONE]") continue;
 
             let evt;
@@ -313,10 +344,16 @@ async function openAICompatible(req) {
                   created,
                   model,
                   choices: [
-                    { index: 0, delta: { reasoning_content: rtext }, finish_reason: null },
+                    {
+                      index: 0,
+                      delta: { reasoning_content: rtext },
+                      finish_reason: null,
+                    },
                   ],
                 };
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+                controller.enqueue(
+                  encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`),
+                );
               }
               continue;
             }
@@ -327,25 +364,44 @@ async function openAICompatible(req) {
               (evt.type === "assistant_message.content_part.text_delta" ||
                 (evt.type === "thread.item_updated" &&
                   evt.update &&
-                  evt.update.type === "assistant_message.content_part.text_delta"));
+                  evt.update.type ===
+                    "assistant_message.content_part.text_delta"));
 
             if (isDeltaType) {
-              const delta = evt.delta !== undefined ? evt.delta : evt.update ? evt.update.delta : undefined;
+              const delta =
+                evt.delta !== undefined
+                  ? evt.delta
+                  : evt.update
+                    ? evt.update.delta
+                    : undefined;
               if (typeof delta === "string" && delta.length > 0) {
                 const chunk = {
                   id: openaiId,
                   object: "chat.completion.chunk",
                   created,
                   model,
-                  choices: [{ index: 0, delta: { content: delta }, finish_reason: null }],
+                  choices: [
+                    {
+                      index: 0,
+                      delta: { content: delta },
+                      finish_reason: null,
+                    },
+                  ],
                 };
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+                controller.enqueue(
+                  encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`),
+                );
               }
               continue;
             }
 
             // finish
-            if (evt && evt.type === "thread.item_done" && evt.item && evt.item.type === "assistant_message") {
+            if (
+              evt &&
+              evt.type === "thread.item_done" &&
+              evt.item &&
+              evt.item.type === "assistant_message"
+            ) {
               const end = {
                 id: openaiId,
                 object: "chat.completion.chunk",
@@ -353,7 +409,9 @@ async function openAICompatible(req) {
                 model,
                 choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
               };
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify(end)}\n\n`));
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify(end)}\n\n`),
+              );
               controller.enqueue(encoder.encode("data: [DONE]\n\n"));
             }
           }
@@ -395,6 +453,7 @@ async function collectFromSSE(body) {
 
       if (!line.startsWith("data: ")) continue;
       const payload = line.slice(6).trim();
+      console.log("RAW PAYLOAD:", payload);
       if (!payload || payload === "[DONE]") continue;
 
       let evt;
@@ -429,7 +488,12 @@ async function collectFromSSE(body) {
             evt.update.type === "assistant_message.content_part.text_delta"));
 
       if (isDeltaType) {
-        const delta = evt.delta !== undefined ? evt.delta : evt.update ? evt.update.delta : "";
+        const delta =
+          evt.delta !== undefined
+            ? evt.delta
+            : evt.update
+              ? evt.update.delta
+              : "";
         if (typeof delta === "string") textOut += delta;
       }
     }
